@@ -171,8 +171,10 @@
           document.getElementById("countdown").textContent =
             formatTime(timerLength);
 
+          umami("Cancel Pomudoro");
           resting();
         } else {
+          umami("Start Pomudoro");
           working();
         }
       }
@@ -219,6 +221,7 @@
           );
           audio.play();
 
+          umami("Complete Pomudoro");
           resting();
         }
         // Draw countdown
