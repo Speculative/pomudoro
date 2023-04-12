@@ -47,6 +47,10 @@
         bottom: 0;
       }
 
+      #container {
+        max-width: 40rem;
+      }
+
       h1 {
         font-size: 4rem;
         margin-bottom: 2rem;
@@ -63,7 +67,6 @@
         color: black;
         cursor: pointer;
         font-size: 2rem;
-        /* transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out; */
       }
 
       #start:active {
@@ -72,53 +75,77 @@
       }
 
       #decoration {
-        margin-top: 1rem;
-        height: 4rem;
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        height: 20rem;
+        width: 20rem;
+        z-index: 100;
+
         display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      #flavor {
+        color: black;
+        font-weight: bold;
+        font-size: 1.5rem;
+      }
+
+      #pomuBox {
+        flex-grow: 1;
+        overflow: hidden;
+        text-align: center;
+      }
+
+      #pomu {
+        max-width: 100%;
+        max-height: 100%;
+        height: auto;
+        width: auto;
+      }
+
+      @media (max-width: 50rem) {
+        #decoration {
+          height: 10rem;
+          width: 10rem;
+        }
+
+        #flavor {
+          font-size: 1rem;
+        }
       }
     </style>
     <script type="text/javascript">
       const NUM_SOUNDS = 14;
-      let timerLength = 5 * 1000;
+      const FRAME_LENGTH = 500;
+      const WORK_GIFS = [
+        "baseball.gif",
+        "cash.gif",
+        "choo_choo.gif",
+        "cursed_pizza.gif",
+        "cyclone.gif",
+        "jump_rope.gif",
+        "kecha.gif",
+        "pomu.gif",
+        "pomutori.gif",
+        "ppbirthday2021.gif",
+        "skate.gif",
+        "sword.gif",
+      ];
+      const REST_GIF = "pomuJAM.gif";
+
+      let timerLength = 25 * 60 * 1000;
       let endTime = 0;
       let interval = -1;
 
-      const WORK_GIFS = [
-        "baseball.webp",
-        "cash.webp",
-        "choo_choo.webp",
-        "cyclone.webp",
-        "jump_rope.webp",
-        "kecha.webp",
-        "pomu.webp",
-        "pomuJAM.webp",
-        "pomutori.webp",
-        "ppbirthday2021.png",
-        "skate.webp",
-        "sword.webp",
-      ];
-
-      const REST_GIF = "cursed_pizza.webp";
-
-      const GIF_DIMESNIONS = {
-        "baseball.webp": [4, 3],
-        "cash.webp": [5, 1],
-        "choo_choo.webp": [3, 3],
-        "cyclone.webp": [3, 3],
-        "jump_rope.webp": [3, 3],
-        "kecha.webp": [4, 2],
-        "pomu.webp": [3, 2],
-        "pomuJAM.webp": [6, 2],
-        "pomutori.webp": [3, 3],
-        "ppbirthday2021.png": [3, 2],
-        "skate.webp": [4, 4],
-        "sword.webp": [5, 2],
-        "cursed_pizza.webp": [5, 3],
-      };
-
-      const FRAME_ADJUSTMENT = {
-        "pomuJAM.webp": -1,
-      };
+      let currentSprite = REST_GIF;
+      let spriteFrame = 0;
+      let frameOffset = 0;
+      let lastFrame = 0;
 
       function pad(num) {
         if (num < 10) {
@@ -136,11 +163,46 @@
       function start() {
         // Reset
         if (interval !== -1) {
-          // Reset?
+          // Reset
+          clearInterval(interval);
+          interval = -1;
+          endTime = 0;
+
+          document.getElementById("countdown").textContent =
+            formatTime(timerLength);
+
+          resting();
         } else {
-          endTime = Date.now() + timerLength;
-          interval = setInterval(tick, 100);
+          working();
         }
+      }
+
+      function working() {
+        // Start timer
+        endTime = Date.now() + timerLength;
+        interval = setInterval(tick, 100);
+
+        // Change button
+        document.getElementById("start").innerText = "Stop Pomudoro";
+
+        // Change flavor
+        document.getElementById("flavor").innerText = "Pomu is working...";
+
+        // Make pomu do work
+        document.getElementById("pomu").src = `gifs/${
+          WORK_GIFS[Math.floor(Math.random() * WORK_GIFS.length)]
+        }`;
+      }
+
+      function resting() {
+        // Change button
+        document.getElementById("start").innerText = "Start Pomudoro";
+
+        // Change flavor
+        document.getElementById("flavor").innerText = "Pomu is resting";
+
+        // Give Pomu a break
+        document.getElementById("pomu").src = `gifs/${REST_GIF}`;
       }
 
       function tick() {
@@ -156,15 +218,96 @@
             `sounds/pomu${pad(Math.floor(Math.random() * NUM_SOUNDS))}.mp3`
           );
           audio.play();
+
+          resting();
         }
         // Draw countdown
         const formatted = formatTime(remaining);
         document.getElementById("countdown").textContent = formatted;
       }
 
+      /*
+      // Janky sprite animation code
+
+      const SPRITE_DIMENSIONS = {
+        "baseball.webp": [4, 3],
+        "cash.webp": [5, 1],
+        "choo_choo.webp": [3, 3],
+        "cyclone.webp": [3, 3],
+        "jump_rope.webp": [3, 3],
+        "kecha.webp": [4, 2],
+        "pomu.webp": [3, 2],
+        "pomuJAM.webp": [6, 2],
+        "pomutori.webp": [3, 3],
+        "ppbirthday2021.png": [3, 2],
+        "skate.webp": [4, 4],
+        "sword.webp": [5, 2],
+        "cursed_pizza.webp": [5, 3],
+      };
+
+      const SPRITE_SHEET_SIZE = {
+        "baseball.webp": [1024, 768],
+        "cash.webp": [1020, 204],
+        "choo_choo.webp": [1024, 1024],
+        "cyclone.webp": [850, 1024],
+        "jump_rope.webp": [1024, 1024],
+        "kecha.webp": [1024, 471],
+        "pomu.webp": [1023, 682],
+        "pomuJAM.webp": [1022, 441],
+        "pomutori.webp": [1024, 1024],
+        "ppbirthday2021.png": [3000, 2000],
+        "skate.webp": [818, 1023],
+        "sword.webp": [1023, 409],
+        "cursed_pizza.webp": [1023, 614],
+      };
+
+      const FRAME_ADJUSTMENT = {
+        "pomuJAM.webp": -1,
+      };
+
+      function animateSprite(t) {
+        // dt is in ms
+        dt = t - lastFrame;
+        lastFrame = t;
+        frameOffset += dt;
+
+        const [cols, rows] = SPRITE_DIMENSIONS[currentSprite];
+        const [sheetWidth, sheetHeight] = SPRITE_SHEET_SIZE[currentSprite];
+        const totalFrames =
+          cols * rows + (FRAME_ADJUSTMENT[currentSprite] ?? 0);
+        const spriteWidth = sheetWidth / cols;
+        const spriteHeight = sheetHeight / rows;
+
+        const frameCol = spriteFrame % cols;
+        const frameRow = Math.floor(spriteFrame / cols);
+
+        const spriteHOff = frameCol * spriteWidth;
+        const spriteVOff = frameRow * spriteHeight;
+
+        if (frameOffset > FRAME_LENGTH) {
+          frameOffset = 0;
+          spriteFrame = (spriteFrame + 1) % totalFrames;
+        }
+
+        const spriteElement = document.getElementById("pomu");
+        pomu.style.backgroundImage = `url(gifs/${currentSprite})`;
+        pomu.style.width = `${spriteWidth}px`;
+        pomu.style.height = `${spriteHeight}px`;
+        pomu.style.backgroundPosition = `${spriteHOff}px ${spriteVOff}px`;
+
+        console.log(spriteHOff, spriteVOff);
+
+        requestAnimationFrame(animateSprite);
+      }
+      */
+
       document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("countdown").textContent =
           formatTime(timerLength);
+        /*
+        lastFrame = performance.now();
+        requestAnimationFrame(animateSprite);
+        */
       });
     </script>
   </head>
@@ -175,6 +318,12 @@
         <text id="countdown" x="0" y="16"></text>
       </svg>
       <button id="start" onclick="start()">Start Pomudoro</button>
+      <div id="decoration">
+        <div id="flavor">Pomu is resting</div>
+        <div id="pomuBox">
+          <img id="pomu" src="gifs/pomuJAM.gif" />
+        </div>
+      </div>
     </div>
   </body>
 </html>
