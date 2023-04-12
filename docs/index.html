@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Ubuntu, sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: #cfeded;
+        padding: 2rem;
+      }
+
+      body::before,
+      body::after {
+        position: absolute;
+        height: 2rem;
+        width: 100%;
+        background-color: #65b2a1;
+        content: " ";
+      }
+
+      body::before {
+        top: 0;
+      }
+
+      body::after {
+        bottom: 0;
+      }
+
+      h1 {
+        font-size: 4rem;
+        margin-bottom: 2rem;
+        color: #65b2a1;
+      }
+
+      #start {
+        width: 100%;
+        padding: 2rem;
+        background: white;
+        border: 0.5rem solid #65b2a1;
+        box-shadow: 2px 2px 1px #65b2a1;
+        border-radius: 4px;
+        color: black;
+        cursor: pointer;
+        font-size: 2rem;
+        /* transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out; */
+      }
+
+      #start:active {
+        box-shadow: 0 0 0 #65b2a1;
+        transform: translate(2px, 2px);
+      }
+
+      #decoration {
+        margin-top: 1rem;
+        height: 4rem;
+        display: flex;
+      }
+    </style>
+    <script type="text/javascript">
+      const NUM_SOUNDS = 14;
+      let timerLength = 5 * 1000;
+      let endTime = 0;
+      let interval = -1;
+
+      const WORK_GIFS = [
+        "baseball.webp",
+        "cash.webp",
+        "choo_choo.webp",
+        "cyclone.webp",
+        "jump_rope.webp",
+        "kecha.webp",
+        "pomu.webp",
+        "pomuJAM.webp",
+        "pomutori.webp",
+        "ppbirthday2021.png",
+        "skate.webp",
+        "sword.webp",
+      ];
+
+      const REST_GIF = "cursed_pizza.webp";
+
+      const GIF_DIMESNIONS = {
+        "baseball.webp": [4, 3],
+        "cash.webp": [5, 1],
+        "choo_choo.webp": [3, 3],
+        "cyclone.webp": [3, 3],
+        "jump_rope.webp": [3, 3],
+        "kecha.webp": [4, 2],
+        "pomu.webp": [3, 2],
+        "pomuJAM.webp": [6, 2],
+        "pomutori.webp": [3, 3],
+        "ppbirthday2021.png": [3, 2],
+        "skate.webp": [4, 4],
+        "sword.webp": [5, 2],
+        "cursed_pizza.webp": [5, 3],
+      };
+
+      const FRAME_ADJUSTMENT = {
+        "pomuJAM.webp": -1,
+      };
+
+      function pad(num) {
+        if (num < 10) {
+          return `0${num}`;
+        }
+        return `${num}`;
+      }
+
+      function formatTime(time) {
+        return `${pad(Math.floor(time / (60 * 1000)))}:${pad(
+          Math.floor(time / 1000) % 60
+        )}`;
+      }
+
+      function start() {
+        // Reset
+        if (interval !== -1) {
+          // Reset?
+        } else {
+          endTime = Date.now() + timerLength;
+          interval = setInterval(tick, 100);
+        }
+      }
+
+      function tick() {
+        let remaining = endTime - Date.now();
+        if (remaining < 0 && interval !== -1) {
+          // Clean up
+          clearInterval(interval);
+          interval = -1;
+          remaining = 0;
+
+          // Play sound
+          const audio = new Audio(
+            `sounds/pomu${pad(Math.floor(Math.random() * NUM_SOUNDS))}.mp3`
+          );
+          audio.play();
+        }
+        // Draw countdown
+        const formatted = formatTime(remaining);
+        document.getElementById("countdown").textContent = formatted;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("countdown").textContent =
+          formatTime(timerLength);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Pomudoro Timer</h1>
+      <svg viewBox="0 0 40 20">
+        <text id="countdown" x="0" y="16"></text>
+      </svg>
+      <button id="start" onclick="start()">Start Pomudoro</button>
+    </div>
+  </body>
+</html>
