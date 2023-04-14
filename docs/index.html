@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>Pomudoro 🍂 Work with Pomu!</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -57,21 +58,54 @@
         color: #65b2a1;
       }
 
-      #start {
-        width: 100%;
-        padding: 2rem;
+      #pomudoroButtons {
+        display: flex;
+      }
+
+      #startstop,
+      #skip,
+      #skipBreak {
         background: white;
         border: 0.5rem solid #65b2a1;
         box-shadow: 2px 2px 1px #65b2a1;
         border-radius: 4px;
         color: black;
         cursor: pointer;
+      }
+
+      #startstop:active,
+      #skip:active {
+        box-shadow: 0 0 0 #65b2a1;
+        transform: translate(2px, 2px);
+      }
+
+      #startstop {
+        width: 100%;
+        padding: 2rem;
         font-size: 2rem;
       }
 
-      #start:active {
-        box-shadow: 0 0 0 #65b2a1;
-        transform: translate(2px, 2px);
+      #skip {
+        margin-left: 1rem;
+        padding: 2rem;
+        font-size: 2rem;
+        display: none;
+      }
+
+      #skip.show {
+        display: block;
+      }
+
+      #skipBreak {
+        margin-top: 1rem;
+        visibility: hidden;
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.5rem;
+      }
+
+      #skipBreak.show {
+        visibility: visible;
       }
 
       #decoration {
@@ -118,6 +152,94 @@
           font-size: 1rem;
         }
       }
+
+      #config {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        width: 20rem;
+      }
+
+      summary {
+        cursor: pointer;
+        list-style: none;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+      }
+
+      fieldset {
+        border: none;
+        width: 100%;
+        min-width: 100%;
+      }
+
+      fieldset + fieldset {
+        margin-top: 1rem;
+      }
+
+      legend {
+        margin-bottom: 0.5rem;
+      }
+
+      #pomudachi {
+        width: 2rem;
+        position: absolute;
+        top: 0;
+        right: 0;
+      }
+
+      details {
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+      }
+
+      details[open] {
+        border: 4px solid #86c699;
+        border-radius: 4px;
+        background: white;
+      }
+
+      input[type="number"] {
+        display: block;
+        min-width: 0;
+        border: 2px solid #86c699;
+        -moz-appearance: textfield;
+      }
+
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+      }
+
+      #timeControls,
+      #breakControls {
+        display: flex;
+        width: 100%;
+      }
+
+      .numAdjust {
+        width: 3rem;
+        height: 2rem;
+        border: 2px solid #86c699;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+      }
+
+      .numAdjust:hover {
+        background: #86c699;
+      }
+
+      #timerLength,
+      #breakLength {
+        flex-shrink: 1;
+        flex-grow: 1;
+        height: 2rem;
+        padding: 0 0.5rem;
+        margin: 0 0.5rem;
+      }
     </style>
     <script type="text/javascript">
       const NUM_SOUNDS = 14;
@@ -132,21 +254,39 @@
         "kecha.gif",
         "pomu.gif",
         "pomutori.gif",
-        "ppbirthday2021.gif",
         "skate.gif",
         "sword.gif",
       ];
-      const REST_GIF = "pomuJAM.gif";
+      const IDLE_GIF = "pomuJAM.gif";
+      const DONE_GIF = "ppbirthday2021.gif";
+      const REST_GIF = "cursed_pizza.gif";
 
-      let timerLength = 25 * 60 * 1000;
-      let endTime = 0;
+      /*
+      idle -> working -> done -> resting -> idle
+                 ^                  ^
+                 |                  |
+                 v                  v
+              paused             paused
+      */
+      let state = "idle";
+      let cycles = 0;
+      let pomudoroLength = 25 * 60;
+      let shortBreakLength = 5 * 60;
+      let longBreakLength = 15 * 60;
+      let cyclesPerLongBreak = 4;
+      let timeRemaining = pomudoroLength;
       let interval = -1;
 
-      let currentSprite = REST_GIF;
+      let currentSprite = IDLE_GIF;
       let spriteFrame = 0;
       let frameOffset = 0;
       let lastFrame = 0;
 
+      /*
+      =================
+      Utility Functions
+      =================
+      */
       function pad(num) {
         if (num < 10) {
           return `0${num}`;
@@ -154,164 +294,210 @@
         return `${num}`;
       }
 
+      function log(event) {
+        if (window.umami) {
+          try {
+            umami(event);
+          } catch {}
+        }
+      }
+
       function formatTime(time) {
-        return `${pad(Math.floor(time / (60 * 1000)))}:${pad(
-          Math.floor(time / 1000) % 60
-        )}`;
-      }
-
-      function start() {
-        // Reset
-        if (interval !== -1) {
-          // Reset
-          clearInterval(interval);
-          interval = -1;
-          endTime = 0;
-
-          document.getElementById("countdown").textContent =
-            formatTime(timerLength);
-
-          umami("Cancel Pomudoro");
-          resting();
-        } else {
-          umami("Start Pomudoro");
-          working();
-        }
-      }
-
-      function working() {
-        // Start timer
-        endTime = Date.now() + timerLength;
-        interval = setInterval(tick, 100);
-
-        // Change button
-        document.getElementById("start").innerText = "Stop Pomudoro";
-
-        // Change flavor
-        document.getElementById("flavor").innerText = "Pomu is working...";
-
-        // Make pomu do work
-        document.getElementById("pomu").src = `gifs/${
-          WORK_GIFS[Math.floor(Math.random() * WORK_GIFS.length)]
-        }`;
-      }
-
-      function resting() {
-        // Change button
-        document.getElementById("start").innerText = "Start Pomudoro";
-
-        // Change flavor
-        document.getElementById("flavor").innerText = "Pomu is resting";
-
-        // Give Pomu a break
-        document.getElementById("pomu").src = `gifs/${REST_GIF}`;
-      }
-
-      function tick() {
-        let remaining = endTime - Date.now();
-        if (remaining < 0 && interval !== -1) {
-          // Clean up
-          clearInterval(interval);
-          interval = -1;
-          remaining = 0;
-
-          // Play sound
-          const audio = new Audio(
-            `sounds/pomu${pad(Math.floor(Math.random() * NUM_SOUNDS))}.mp3`
-          );
-          audio.play();
-
-          umami("Complete Pomudoro");
-          resting();
-        }
-        // Draw countdown
-        const formatted = formatTime(remaining);
-        document.getElementById("countdown").textContent = formatted;
+        // TODO: assumes it's never an hour
+        return `${pad(Math.floor(time / 60))}:${pad(Math.floor(time) % 60)}`;
       }
 
       /*
-      // Janky sprite animation code
-
-      const SPRITE_DIMENSIONS = {
-        "baseball.webp": [4, 3],
-        "cash.webp": [5, 1],
-        "choo_choo.webp": [3, 3],
-        "cyclone.webp": [3, 3],
-        "jump_rope.webp": [3, 3],
-        "kecha.webp": [4, 2],
-        "pomu.webp": [3, 2],
-        "pomuJAM.webp": [6, 2],
-        "pomutori.webp": [3, 3],
-        "ppbirthday2021.png": [3, 2],
-        "skate.webp": [4, 4],
-        "sword.webp": [5, 2],
-        "cursed_pizza.webp": [5, 3],
-      };
-
-      const SPRITE_SHEET_SIZE = {
-        "baseball.webp": [1024, 768],
-        "cash.webp": [1020, 204],
-        "choo_choo.webp": [1024, 1024],
-        "cyclone.webp": [850, 1024],
-        "jump_rope.webp": [1024, 1024],
-        "kecha.webp": [1024, 471],
-        "pomu.webp": [1023, 682],
-        "pomuJAM.webp": [1022, 441],
-        "pomutori.webp": [1024, 1024],
-        "ppbirthday2021.png": [3000, 2000],
-        "skate.webp": [818, 1023],
-        "sword.webp": [1023, 409],
-        "cursed_pizza.webp": [1023, 614],
-      };
-
-      const FRAME_ADJUSTMENT = {
-        "pomuJAM.webp": -1,
-      };
-
-      function animateSprite(t) {
-        // dt is in ms
-        dt = t - lastFrame;
-        lastFrame = t;
-        frameOffset += dt;
-
-        const [cols, rows] = SPRITE_DIMENSIONS[currentSprite];
-        const [sheetWidth, sheetHeight] = SPRITE_SHEET_SIZE[currentSprite];
-        const totalFrames =
-          cols * rows + (FRAME_ADJUSTMENT[currentSprite] ?? 0);
-        const spriteWidth = sheetWidth / cols;
-        const spriteHeight = sheetHeight / rows;
-
-        const frameCol = spriteFrame % cols;
-        const frameRow = Math.floor(spriteFrame / cols);
-
-        const spriteHOff = frameCol * spriteWidth;
-        const spriteVOff = frameRow * spriteHeight;
-
-        if (frameOffset > FRAME_LENGTH) {
-          frameOffset = 0;
-          spriteFrame = (spriteFrame + 1) % totalFrames;
-        }
-
-        const spriteElement = document.getElementById("pomu");
-        pomu.style.backgroundImage = `url(gifs/${currentSprite})`;
-        pomu.style.width = `${spriteWidth}px`;
-        pomu.style.height = `${spriteHeight}px`;
-        pomu.style.backgroundPosition = `${spriteHOff}px ${spriteVOff}px`;
-
-        console.log(spriteHOff, spriteVOff);
-
-        requestAnimationFrame(animateSprite);
-      }
+      ======================
+      Cycle State Management
+      ======================
       */
+      function unpause() {
+        interval = setInterval(tick, 1000);
+        updateInterface();
+      }
+
+      function pause() {
+        clearInterval(interval);
+        interval = -1;
+        updateInterface();
+      }
+
+      function start(timerLength) {
+        timeRemaining = timerLength;
+        drawCountdown();
+        updateInterface();
+        setGif();
+        unpause();
+      }
+
+      function stop(nextCycleTime) {
+        clearInterval(interval);
+        interval = -1;
+        timeRemaining = nextCycleTime;
+        drawCountdown();
+        updateInterface();
+      }
+
+      function completeSegment() {
+        imPomu();
+        if (state === "working") {
+          if (nextBreakIsLong()) {
+            stop(longBreakLength);
+          } else {
+            stop(shortBreakLength);
+          }
+
+          state = "done";
+          updateInterface();
+          setGif();
+        } else if (state === "resting") {
+          stop(pomudoroLength);
+
+          cycles += 1;
+          state = "idle";
+          updateInterface();
+          setGif();
+        }
+      }
+
+      function startBreak() {
+        log("Start Break");
+        if (nextBreakIsLong()) {
+          start(longBreakLength);
+        } else {
+          start(shortBreakLength);
+        }
+      }
+
+      function nextBreakIsLong() {
+        if ((cycles + 1) % cyclesPerLongBreak === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      // TODO: add flavor, gif
+      // figure out what to do with skip break button. remove?
+      function updateInterface() {
+        const startStopButton = document.getElementById("startstop");
+        const skipButton = document.getElementById("skip");
+        const flavor = document.getElementById("flavor");
+
+        if (state === "idle") {
+          startStopButton.innerText = "Start Pomudoro";
+          skipButton.classList.remove("show");
+          flavor.innerText = "Pomu is idle";
+        } else if (state === "working") {
+          skipButton.classList.add("show");
+          flavor.innerText = "Pomu is working";
+          if (interval !== -1) {
+            startStopButton.innerText = "Pause Pomudoro";
+          } else {
+            startStopButton.innerText = "Resume Pomudoro";
+          }
+        } else if (state === "done") {
+          flavor.innerText = "Pomu is done!";
+          if (nextBreakIsLong()) {
+            startStopButton.innerText = "Start Long Break";
+          } else {
+            startStopButton.innerText = "Start Short Break";
+          }
+          skipButton.classList.remove("show");
+        } else if (state === "resting") {
+          flavor.innerText = "Pomu is resting";
+          skipButton.classList.add("show");
+          if (interval !== -1) {
+            if (nextBreakIsLong()) {
+              startStopButton.innerText = "Pause Long Break";
+            } else {
+              startStopButton.innerText = "Pause Short Break";
+            }
+          } else {
+            if (nextBreakIsLong()) {
+              startStopButton.innerText = "Resume Long Break";
+            } else {
+              startStopButton.innerText = "Resume Short Break";
+            }
+          }
+        }
+      }
+
+      /*
+      ===================
+      Interface rendering
+      ===================
+      */
+      function imPomu() {
+        const audio = new Audio(
+          `sounds/pomu${pad(Math.floor(Math.random() * NUM_SOUNDS))}.mp3`
+        );
+        audio.play();
+      }
+
+      function drawCountdown() {
+        const formatted = formatTime(timeRemaining);
+        document.getElementById("countdown").textContent = formatted;
+      }
+
+      function tick() {
+        timeRemaining -= 1;
+        drawCountdown();
+        if (timeRemaining <= 0 && interval !== -1) {
+          completeSegment();
+        }
+      }
 
       document.addEventListener("DOMContentLoaded", function () {
-        document.getElementById("countdown").textContent =
-          formatTime(timerLength);
-        /*
-        lastFrame = performance.now();
-        requestAnimationFrame(animateSprite);
-        */
+        drawCountdown();
+        updateInterface();
       });
+
+      function setGif() {
+        let gif = IDLE_GIF;
+        if (state === "idle") {
+          pomu.src = `gifs/${IDLE_GIF}`;
+        } else if (state === "working") {
+          gif = WORK_GIFS[Math.floor(Math.random() * WORK_GIFS.length)];
+        } else if (state === "done") {
+          gif = DONE_GIF;
+        } else if (state === "resting") {
+          gif = REST_GIF;
+        }
+        document.getElementById("pomu").src = `gifs/${gif}`;
+      }
+
+      /*
+      ===============
+      Button Handlers
+      ===============
+      */
+      function startstop() {
+        if (state === "idle") {
+          log("Start Pomudoro");
+          state = "working";
+          updateInterface();
+          setGif();
+          start(pomudoroLength);
+        } else if (state === "working" || state === "resting") {
+          if (interval !== -1) {
+            console.log("Pausing");
+            pause();
+          } else {
+            console.log("Unpausing");
+            unpause();
+          }
+        } else if (state === "done") {
+          state = "resting";
+          setGif();
+          startBreak();
+        }
+      }
+
+      function skip() {
+        completeSegment();
+      }
     </script>
     <script
       async
@@ -326,9 +512,52 @@
       <svg viewBox="0 0 40 20">
         <text id="countdown" x="0" y="16"></text>
       </svg>
-      <button id="start" onclick="start()">Start Pomudoro</button>
+      <div id="buttons">
+        <div id="pomudoroButtons">
+          <button id="startstop" onclick="startstop()">Start Pomudoro</button>
+          <button id="skip" onclick="skip()">>></button>
+        </div>
+        <button id="skipBreak" onclick="skipBreak()">Skip Break</button>
+      </div>
+      <div id="config">
+        <details>
+          <summary>
+            <img title="Settings" id="pomudachi" src="pomudachi.webp" />
+          </summary>
+          <fieldset id="timeConfig">
+            <legend>Timer length</legend>
+            <div id="timeControls">
+              <button id="reduceTime" class="numAdjust">-</button>
+              <input
+                id="timerLength"
+                type="number"
+                step="5"
+                min="5"
+                max="60"
+                value="25"
+              />
+              <button id="increaseTime" class="numAdjust">+</button>
+            </div>
+          </fieldset>
+          <fieldset id="breakConfig">
+            <legend>Break length</legend>
+            <div id="breakControls">
+              <button id="reduceBreak" class="numAdjust">-</button>
+              <input
+                id="breakLength"
+                type="number"
+                step="1"
+                min="1"
+                max="20"
+                value="5"
+              />
+              <button id="increaseBreak" class="numAdjust">+</button>
+            </div>
+          </fieldset>
+        </details>
+      </div>
       <div id="decoration">
-        <div id="flavor">Pomu is resting</div>
+        <div id="flavor">Pomu is idle</div>
         <div id="pomuBox">
           <img id="pomu" src="gifs/pomuJAM.gif" />
         </div>
