@@ -1,0 +1,6 @@
+{
+    /* Just for type hints in pomudoro.js */
+    "compilerOptions": {
+        "checkJs": true
+    }
+}

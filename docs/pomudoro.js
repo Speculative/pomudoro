@@ -25,15 +25,40 @@ idle -> working -> done -> resting -> idle
         paused             paused
 */
 // Settings
-let pomudoroLength = 25 * 60;
-let shortBreakLength = 5 * 60;
-let longBreakLength = 15 * 60;
-let cyclesPerLongBreak = 4;
+let settings = {
+  pomudoroLength: 25 * 60,
+  shortBreakLength: 5 * 60,
+  longBreakLength: 15 * 60,
+  cyclesPerLongBreak: 4,
+};
+
+const SETTING_DEFS = {
+  pomudoroLength: {
+    name: "Pomudoro length",
+    unit: 60,
+    step: 5,
+  },
+  shortBreakLength: {
+    name: "Short break length",
+    unit: 60,
+    step: 5,
+  },
+  longBreakLength: {
+    name: "Long break length",
+    unit: 60,
+    step: 5,
+  },
+  cyclesPerLongBreak: {
+    name: "Pomudoros per long break",
+    unit: 1,
+    step: 1,
+  },
+};
 
 // State
 let state = "idle";
 let cycles = 0;
-let timeRemaining = pomudoroLength;
+let timeRemaining = settings.pomudoroLength;
 let interval = -1;
 
 /*
@@ -97,16 +122,16 @@ function completeSegment() {
   imPomu();
   if (state === "working") {
     if (nextBreakIsLong()) {
-      stop(longBreakLength);
+      stop(settings.longBreakLength);
     } else {
-      stop(shortBreakLength);
+      stop(settings.shortBreakLength);
     }
 
     state = "done";
     updateInterface();
     setGif();
   } else if (state === "resting") {
-    stop(pomudoroLength);
+    stop(settings.pomudoroLength);
 
     cycles += 1;
     state = "idle";
@@ -118,15 +143,15 @@ function completeSegment() {
 function startBreak() {
   if (nextBreakIsLong()) {
     log("Start Long Break");
-    start(longBreakLength);
+    start(settings.longBreakLength);
   } else {
     log("Start Short Break");
-    start(shortBreakLength);
+    start(settings.shortBreakLength);
   }
 }
 
 function nextBreakIsLong() {
-  if ((cycles + 1) % cyclesPerLongBreak === 0) {
+  if ((cycles + 1) % settings.cyclesPerLongBreak === 0) {
     return true;
   } else {
     return false;
@@ -202,15 +227,10 @@ function tick() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  drawCountdown();
-  updateInterface();
-});
-
 function setGif() {
   let gif = IDLE_GIF;
   if (state === "idle") {
-    pomu.src = `gifs/${IDLE_GIF}`;
+    gif = IDLE_GIF;
   } else if (state === "working") {
     gif = WORK_GIFS[Math.floor(Math.random() * WORK_GIFS.length)];
   } else if (state === "done") {
@@ -232,7 +252,7 @@ function startstop() {
     state = "working";
     updateInterface();
     setGif();
-    start(pomudoroLength);
+    start(settings.pomudoroLength);
   } else if (state === "working" || state === "resting") {
     if (interval !== -1) {
       pause();
@@ -255,3 +275,97 @@ function skip() {
 Settings management
 ===================
 */
+/**
+ * @param {keyof typeof settings} settingKey
+ */
+function decreaseNumericSetting(settingKey) {
+  const { unit, step } = SETTING_DEFS[settingKey];
+  if (settings[settingKey] > unit) {
+    // TODO: Snap
+    settings[settingKey] -= unit * step;
+    // Re-render
+    document.getElementById(settingKey).value = Math.floor(
+      settings[settingKey] / unit
+    );
+  }
+}
+
+/**
+ * @param {keyof typeof settings} settingKey
+ */
+function increaseNumericSetting(settingKey) {
+  const { unit, step } = SETTING_DEFS[settingKey];
+  settings[settingKey] += unit * step;
+  // Re-render
+  document.getElementById(settingKey).value = Math.floor(
+    settings[settingKey] / unit
+  );
+}
+
+/**
+ * @param {keyof typeof settings} settingKey
+ */
+function changeNumericSetting(settingKey) {
+  const { unit } = SETTING_DEFS[settingKey];
+  const value = parseInt(document.getElementById(settingKey).value);
+  settings[settingKey] = value * unit;
+}
+
+// TODO: redraw interface if relevant setting changes
+
+function addNumericSetting(settingKey) {
+  const { name, step, unit } = SETTING_DEFS[settingKey];
+  const fieldset = document.createElement("fieldset");
+  document.getElementById("settings").appendChild(fieldset);
+
+  const legend = document.createElement("legend");
+  legend.innerText = name;
+  fieldset.appendChild(legend);
+
+  const fieldControls = document.createElement("div");
+  fieldControls.classList.add("numericControl");
+  fieldset.appendChild(fieldControls);
+
+  const decreaseButton = document.createElement("button");
+  decreaseButton.innerText = "-";
+  decreaseButton.classList.add("numAdjust");
+  decreaseButton.onclick = () => decreaseNumericSetting(settingKey);
+  fieldControls.appendChild(decreaseButton);
+
+  const input = document.createElement("input");
+  input.setAttribute("type", "number");
+  input.setAttribute("id", settingKey);
+  input.setAttribute("min", "1");
+  input.setAttribute("step", `${step}`);
+  input.value = `${Math.floor(settings[settingKey] / unit)}`;
+  input.onchange = () => changeNumericSetting(settingKey);
+  fieldControls.appendChild(input);
+
+  const increaseButton = document.createElement("button");
+  increaseButton.innerText = "+";
+  increaseButton.classList.add("numAdjust");
+  increaseButton.onclick = () => increaseNumericSetting(settingKey);
+  fieldControls.appendChild(increaseButton);
+}
+
+function addSettings() {
+  for (const setting of [
+    "pomudoroLength",
+    "shortBreakLength",
+    "longBreakLength",
+    "cyclesPerLongBreak",
+  ]) {
+    addNumericSetting(setting);
+  }
+}
+
+/*
+==============
+Initial render
+==============
+*/
+document.addEventListener("DOMContentLoaded", function () {
+  drawCountdown();
+  updateInterface();
+  addSettings();
+});
