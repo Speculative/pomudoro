@@ -158,6 +158,7 @@
         top: 1rem;
         right: 1rem;
         width: 20rem;
+        z-index: 200;
       }
 
       summary {
@@ -202,19 +203,32 @@
       }
 
       input[type="number"] {
-        display: block;
+        /* Browser default style makes inputs overflow containers */
         min-width: 0;
-        border: 2px solid #86c699;
+        display: block;
+
+        /* Disable little buttons */
         -moz-appearance: textfield;
+
+        border: 2px solid #86c699;
+        flex-shrink: 1;
+        flex-grow: 1;
+        height: 2rem;
+        padding: 0 0.5rem;
+        margin: 0 0.5rem;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
       }
 
       input::-webkit-outer-spin-button,
       input::-webkit-inner-spin-button {
+        /* Disable little buttons */
         -webkit-appearance: none;
       }
 
-      #timeControls,
-      #breakControls {
+      .numericControl {
         display: flex;
         width: 100%;
       }
@@ -226,19 +240,12 @@
         border-radius: 4px;
         background: white;
         cursor: pointer;
+        font-weight: bold;
       }
 
       .numAdjust:hover {
         background: #86c699;
-      }
-
-      #timerLength,
-      #breakLength {
-        flex-shrink: 1;
-        flex-grow: 1;
-        height: 2rem;
-        padding: 0 0.5rem;
-        margin: 0 0.5rem;
+        color: white;
       }
     </style>
     <script type="text/javascript">
@@ -362,10 +369,11 @@
       }
 
       function startBreak() {
-        log("Start Break");
         if (nextBreakIsLong()) {
+          log("Start Long Break");
           start(longBreakLength);
         } else {
+          log("Start Short Break");
           start(shortBreakLength);
         }
       }
@@ -482,10 +490,8 @@
           start(pomudoroLength);
         } else if (state === "working" || state === "resting") {
           if (interval !== -1) {
-            console.log("Pausing");
             pause();
           } else {
-            console.log("Unpausing");
             unpause();
           }
         } else if (state === "done") {
@@ -498,6 +504,12 @@
       function skip() {
         completeSegment();
       }
+
+      /*
+      ===================
+      Settings management
+      ===================
+      */
     </script>
     <script
       async
@@ -525,8 +537,8 @@
             <img title="Settings" id="pomudachi" src="pomudachi.webp" />
           </summary>
           <fieldset id="timeConfig">
-            <legend>Timer length</legend>
-            <div id="timeControls">
+            <legend>Pomudoro length</legend>
+            <div id="timeControls" class="numericControl">
               <button id="reduceTime" class="numAdjust">-</button>
               <input
                 id="timerLength"
@@ -540,18 +552,48 @@
             </div>
           </fieldset>
           <fieldset id="breakConfig">
-            <legend>Break length</legend>
-            <div id="breakControls">
-              <button id="reduceBreak" class="numAdjust">-</button>
+            <legend>Short break length</legend>
+            <div id="shortBreakControls" class="numericControl">
+              <button id="reduceShortBreak" class="numAdjust">-</button>
               <input
-                id="breakLength"
+                id="shortBreakLength"
                 type="number"
                 step="1"
                 min="1"
                 max="20"
                 value="5"
               />
-              <button id="increaseBreak" class="numAdjust">+</button>
+              <button id="increaseShortBreak" class="numAdjust">+</button>
+            </div>
+          </fieldset>
+          <fieldset id="longBreakConfig">
+            <legend>Long break length</legend>
+            <div id="longBreakControls" class="numericControl">
+              <button id="reduceLongBreak" class="numAdjust">-</button>
+              <input
+                id="longBreakLength"
+                type="number"
+                step="1"
+                min="1"
+                max="60"
+                value="15"
+              />
+              <button id="increaseLongBreak" class="numAdjust">+</button>
+            </div>
+          </fieldset>
+          <fieldset id="cyclesPerLongBreakConfig">
+            <legend>Pomudoros per long break</legend>
+            <div id="longBreakControls" class="numericControl">
+              <button id="reduceLongBreak" class="numAdjust">-</button>
+              <input
+                id="longBreakLength"
+                type="number"
+                step="1"
+                min="1"
+                max="10"
+                value="4"
+              />
+              <button id="increaseLongBreak" class="numAdjust">+</button>
             </div>
           </fieldset>
         </details>
