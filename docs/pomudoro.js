@@ -4,7 +4,6 @@ const WORK_GIFS = [
   "baseball.gif",
   "cash.gif",
   "choo_choo.gif",
-  "cursed_pizza.gif",
   "cyclone.gif",
   "jump_rope.gif",
   "kecha.gif",
@@ -107,9 +106,6 @@ function pause() {
 
 function start(timerLength) {
   timeRemaining = timerLength;
-  drawCountdown();
-  updateInterface();
-  setGif();
   unpause();
 }
 
