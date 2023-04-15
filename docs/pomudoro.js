@@ -25,7 +25,7 @@ idle -> working -> done -> resting -> idle
         paused             paused
 */
 // Settings
-let settings = {
+const settings = {
   pomudoroLength: 25 * 60,
   shortBreakLength: 5 * 60,
   longBreakLength: 15 * 60,
@@ -37,16 +37,19 @@ const SETTING_DEFS = {
     name: "Pomudoro length",
     unit: 60,
     step: 5,
+    setEffect: handleChangeTimeSetting,
   },
   shortBreakLength: {
     name: "Short break length",
     unit: 60,
     step: 5,
+    setEffect: handleChangeTimeSetting,
   },
   longBreakLength: {
     name: "Long break length",
     unit: 60,
     step: 5,
+    setEffect: handleChangeTimeSetting,
   },
   cyclesPerLongBreak: {
     name: "Pomudoros per long break",
@@ -118,26 +121,38 @@ function stop(nextCycleTime) {
   updateInterface();
 }
 
+function transitionState() {
+  if (state === "idle") {
+    state = "working";
+  } else if (state === "working") {
+    state = "done";
+  } else if (state === "done") {
+    state = "resting";
+  } else if (state === "resting") {
+    state = "idle";
+  }
+  // Because GIFs are selected randomly, we only want to set it once,
+  // so we do it at the same time as the state transition.
+  updateInterface();
+  setGif();
+}
+
 function completeSegment() {
   imPomu();
+
+  // Clean up timer & draw
   if (state === "working") {
     if (nextBreakIsLong()) {
       stop(settings.longBreakLength);
     } else {
       stop(settings.shortBreakLength);
     }
-
-    state = "done";
-    updateInterface();
-    setGif();
   } else if (state === "resting") {
     stop(settings.pomudoroLength);
-
     cycles += 1;
-    state = "idle";
-    updateInterface();
-    setGif();
   }
+
+  transitionState();
 }
 
 function startBreak() {
@@ -249,9 +264,7 @@ Button Handlers
 function startstop() {
   if (state === "idle") {
     log("Start Pomudoro");
-    state = "working";
-    updateInterface();
-    setGif();
+    transitionState();
     start(settings.pomudoroLength);
   } else if (state === "working" || state === "resting") {
     if (interval !== -1) {
@@ -260,8 +273,7 @@ function startstop() {
       unpause();
     }
   } else if (state === "done") {
-    state = "resting";
-    setGif();
+    transitionState();
     startBreak();
   }
 }
@@ -279,7 +291,7 @@ Settings management
  * @param {keyof typeof settings} settingKey
  */
 function decreaseNumericSetting(settingKey) {
-  const { unit, step } = SETTING_DEFS[settingKey];
+  const { unit, step, setEffect } = SETTING_DEFS[settingKey];
   if (settings[settingKey] > unit) {
     // TODO: Snap
     settings[settingKey] -= unit * step;
@@ -287,6 +299,7 @@ function decreaseNumericSetting(settingKey) {
     document.getElementById(settingKey).value = Math.floor(
       settings[settingKey] / unit
     );
+    setEffect();
   }
 }
 
@@ -294,21 +307,36 @@ function decreaseNumericSetting(settingKey) {
  * @param {keyof typeof settings} settingKey
  */
 function increaseNumericSetting(settingKey) {
-  const { unit, step } = SETTING_DEFS[settingKey];
+  const { unit, step, setEffect } = SETTING_DEFS[settingKey];
   settings[settingKey] += unit * step;
   // Re-render
   document.getElementById(settingKey).value = Math.floor(
     settings[settingKey] / unit
   );
+  setEffect();
 }
 
 /**
  * @param {keyof typeof settings} settingKey
  */
 function changeNumericSetting(settingKey) {
-  const { unit } = SETTING_DEFS[settingKey];
+  const { unit, setEffect } = SETTING_DEFS[settingKey];
   const value = parseInt(document.getElementById(settingKey).value);
   settings[settingKey] = value * unit;
+  setEffect();
+}
+
+function handleChangeTimeSetting() {
+  if (state === "idle" && interval === -1) {
+    timeRemaining = settings.pomudoroLength;
+  } else if (state === "done" && interval === -1) {
+    if (nextBreakIsLong()) {
+      timeRemaining = settings.longBreakLength;
+    } else {
+      timeRemaining = settings.shortBreakLength;
+    }
+  }
+  drawCountdown();
 }
 
 // TODO: redraw interface if relevant setting changes
