@@ -16,6 +16,48 @@ const IDLE_GIF = "pomuJAM.gif";
 const DONE_GIF = "ppbirthday2021.gif";
 const REST_GIF = "cursed_pizza.gif";
 
+const CLOCKS_HALF_HOURS = [
+  "🕛",
+  "🕧",
+  "🕐",
+  "🕜",
+  "🕑",
+  "🕝",
+  "🕒",
+  "🕞",
+  "🕓",
+  "🕟",
+  "🕔",
+  "🕠",
+  "🕕",
+  "🕡",
+  "🕖",
+  "🕢",
+  "🕗",
+  "🕣",
+  "🕘",
+  "🕤",
+  "🕙",
+  "🕥",
+  "🕚",
+  "🕦",
+];
+const CLOCKS_HOURS = [
+  "🕛",
+  "🕐",
+  "🕑",
+  "🕒",
+  "🕓",
+  "🕔",
+  "🕕",
+  "🕖",
+  "🕗",
+  "🕘",
+  "🕙",
+  "🕚",
+];
+const CLOCKS = CLOCKS_HOURS;
+
 /*
 idle -> working -> done -> resting -> idle
             ^                  ^
@@ -61,6 +103,7 @@ const SETTING_DEFS = {
 let state = "idle";
 let cycles = 0;
 let timeRemaining = settings.pomudoroLength;
+let totalTime = settings.pomudoroLength;
 let interval = -1;
 
 /*
@@ -68,19 +111,19 @@ let interval = -1;
 Utility Functions
 =================
 */
-function pad(num) {
-  if (num < 10) {
-    return `0${num}`;
-  }
-  return `${num}`;
-}
-
 function log(event) {
   if (window.umami) {
     try {
       umami(event);
     } catch {}
   }
+}
+
+function pad(num) {
+  if (num < 10) {
+    return `0${num}`;
+  }
+  return `${num}`;
 }
 
 function formatTime(time) {
@@ -106,6 +149,7 @@ function pause() {
 
 function start(timerLength) {
   timeRemaining = timerLength;
+  totalTime = timerLength;
   unpause();
 }
 
@@ -113,6 +157,7 @@ function stop(nextCycleTime) {
   clearInterval(interval);
   interval = -1;
   timeRemaining = nextCycleTime;
+  totalTime = nextCycleTime;
   drawCountdown();
   updateInterface();
 }
@@ -230,9 +275,18 @@ function drawCountdown() {
   document.getElementById("countdown").textContent = formatted;
 }
 
+function drawFavicon() {
+  const percentDone = (totalTime - timeRemaining) / totalTime;
+  const clock = Math.floor(percentDone * CLOCKS.length);
+  document.querySelector(`link[rel="icon"]`).href = `
+      data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${CLOCKS[clock]}</text></svg>
+  `;
+}
+
 function tick() {
   timeRemaining -= 1;
   drawCountdown();
+  drawFavicon();
   if (timeRemaining <= 0 && interval !== -1) {
     completeSegment();
   }
@@ -240,16 +294,24 @@ function tick() {
 
 function setGif() {
   let gif = IDLE_GIF;
+  let favicon = null;
   if (state === "idle") {
     gif = IDLE_GIF;
+    favicon = "🍅";
   } else if (state === "working") {
     gif = WORK_GIFS[Math.floor(Math.random() * WORK_GIFS.length)];
+    favicon = CLOCKS[0];
   } else if (state === "done") {
     gif = DONE_GIF;
+    favicon = "💤";
   } else if (state === "resting") {
     gif = REST_GIF;
+    favicon = CLOCKS[0];
   }
   document.getElementById("pomu").src = `gifs/${gif}`;
+  document.querySelector(
+    `link[rel="icon"]`
+  ).href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${favicon}</text></svg>`;
 }
 
 /*
@@ -391,5 +453,6 @@ Initial render
 document.addEventListener("DOMContentLoaded", function () {
   drawCountdown();
   updateInterface();
+  setGif();
   addSettings();
 });
