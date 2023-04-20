@@ -1,3 +1,5 @@
+const pomuWorker = new Worker("pomu_worker.js");
+
 const NUM_SOUNDS = 14;
 const FRAME_LENGTH = 500;
 const WORK_GIFS = [
@@ -67,28 +69,28 @@ idle -> working -> done -> resting -> idle
 */
 // Settings
 const settings = {
-  pomudoroLength: 25 * 60,
-  shortBreakLength: 5 * 60,
-  longBreakLength: 15 * 60,
+  pomudoroLength: 25 * 60 * 1000,
+  shortBreakLength: 5 * 60 * 1000,
+  longBreakLength: 15 * 60 * 1000,
   cyclesPerLongBreak: 4,
 };
 
 const SETTING_DEFS = {
   pomudoroLength: {
     name: "Pomudoro length",
-    unit: 60,
+    unit: 60 * 1000,
     step: 5,
     setEffect: handleChangeTimeSetting,
   },
   shortBreakLength: {
     name: "Short break length",
-    unit: 60,
+    unit: 60 * 1000,
     step: 5,
     setEffect: handleChangeTimeSetting,
   },
   longBreakLength: {
     name: "Long break length",
-    unit: 60,
+    unit: 60 * 1000,
     step: 5,
     setEffect: handleChangeTimeSetting,
   },
@@ -104,7 +106,7 @@ let state = "idle";
 let cycles = 0;
 let timeRemaining = settings.pomudoroLength;
 let totalTime = settings.pomudoroLength;
-let interval = -1;
+let paused = false;
 
 /*
 =================
@@ -127,8 +129,9 @@ function pad(num) {
 }
 
 function formatTime(time) {
+  const seconds = time / 1000;
   // TODO: assumes it's never an hour
-  return `${pad(Math.floor(time / 60))}:${pad(Math.floor(time) % 60)}`;
+  return `${pad(Math.floor(seconds / 60))}:${pad(Math.floor(seconds) % 60)}`;
 }
 
 /*
@@ -137,25 +140,26 @@ Cycle State Management
 ======================
 */
 function unpause() {
-  interval = setInterval(tick, 1000);
+  pomuWorker.postMessage({ msg: "unpause" });
+  paused = false;
   updateInterface();
 }
 
 function pause() {
-  clearInterval(interval);
-  interval = -1;
+  pomuWorker.postMessage({ msg: "pause" });
+  paused = true;
   updateInterface();
 }
 
 function start(timerLength) {
   timeRemaining = timerLength;
   totalTime = timerLength;
-  unpause();
+  pomuWorker.postMessage({ msg: "start", length: timerLength });
+  updateInterface();
 }
 
 function stop(nextCycleTime) {
-  clearInterval(interval);
-  interval = -1;
+  pomuWorker.postMessage({ msg: "stop" });
   timeRemaining = nextCycleTime;
   totalTime = nextCycleTime;
   drawCountdown();
@@ -180,6 +184,9 @@ function transitionState() {
 
 function completeSegment() {
   imPomu();
+
+  // If the user clicked skip when paused
+  paused = false;
 
   // Clean up timer & draw
   if (state === "working") {
@@ -226,7 +233,7 @@ function updateInterface() {
   } else if (state === "working") {
     skipButton.classList.add("show");
     flavor.innerText = "Pomu is working";
-    if (interval !== -1) {
+    if (!paused) {
       startStopButton.innerText = "Pause Pomudoro";
     } else {
       startStopButton.innerText = "Resume Pomudoro";
@@ -242,7 +249,7 @@ function updateInterface() {
   } else if (state === "resting") {
     flavor.innerText = "Pomu is resting";
     skipButton.classList.add("show");
-    if (interval !== -1) {
+    if (!paused) {
       if (nextBreakIsLong()) {
         startStopButton.innerText = "Pause Long Break";
       } else {
@@ -283,14 +290,15 @@ function drawFavicon() {
   `;
 }
 
-function tick() {
-  timeRemaining -= 1;
+pomuWorker.onmessage = function (e) {
+  const { timeRemaining: dTimeRemaining } = e.data;
+  timeRemaining = dTimeRemaining;
   drawCountdown();
   drawFavicon();
-  if (timeRemaining <= 0 && interval !== -1) {
+  if (timeRemaining <= 0) {
     completeSegment();
   }
-}
+};
 
 function setGif() {
   let gif = IDLE_GIF;
@@ -325,7 +333,7 @@ function startstop() {
     transitionState();
     start(settings.pomudoroLength);
   } else if (state === "working" || state === "resting") {
-    if (interval !== -1) {
+    if (!paused) {
       pause();
     } else {
       unpause();
@@ -385,13 +393,16 @@ function changeNumericSetting(settingKey) {
 }
 
 function handleChangeTimeSetting() {
-  if (state === "idle" && interval === -1) {
+  if (state === "idle" && timeRemaining === totalTime) {
     timeRemaining = settings.pomudoroLength;
-  } else if (state === "done" && interval === -1) {
+    totalTime = settings.pomudoroLength;
+  } else if (state === "done" && timeRemaining === totalTime) {
     if (nextBreakIsLong()) {
       timeRemaining = settings.longBreakLength;
+      totalTime = settings.longBreakLength;
     } else {
       timeRemaining = settings.shortBreakLength;
+      totalTime = settings.shortBreakLength;
     }
   }
   drawCountdown();
