@@ -60,6 +60,8 @@ const CLOCKS_HOURS = [
 ];
 const CLOCKS = CLOCKS_HOURS;
 
+const DEFAULT_TITLE = "Pomudoro 🍂 Work with Pomu!";
+
 /*
 idle -> working -> done -> resting -> idle
             ^                  ^
@@ -230,6 +232,7 @@ function updateInterface() {
     startStopButton.innerText = "Start Pomudoro";
     skipButton.classList.remove("show");
     flavor.innerText = "Pomu is idle";
+    document.title = DEFAULT_TITLE;
   } else if (state === "working") {
     skipButton.classList.add("show");
     flavor.innerText = "Pomu is working";
@@ -246,6 +249,7 @@ function updateInterface() {
       startStopButton.innerText = "Start Short Break";
     }
     skipButton.classList.remove("show");
+    document.title = DEFAULT_TITLE;
   } else if (state === "resting") {
     flavor.innerText = "Pomu is resting";
     skipButton.classList.add("show");
@@ -280,6 +284,7 @@ function imPomu() {
 function drawCountdown() {
   const formatted = formatTime(timeRemaining);
   document.getElementById("countdown").textContent = formatted;
+  document.title = `${formatted} 🍂 Pomudoro`;
 }
 
 function drawFavicon() {
