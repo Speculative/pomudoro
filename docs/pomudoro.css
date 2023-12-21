@@ -222,6 +222,46 @@ input::-webkit-inner-spin-button {
   width: 100%;
 }
 
+.booleanControl {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.booleanControl label {
+  user-select: none;
+}
+
+.booleanControl input[type="checkbox"] {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  -o-appearance: none;
+  appearance: none;
+
+  height: 1.5rem;
+  width: 1.5rem;
+  margin-right: 0.5rem;
+  outline: none;
+  border: 2px solid #86c699;
+  border-radius: 4px;
+  position: relative;
+}
+
+.booleanControl input[type="checkbox"]:checked {
+}
+
+.booleanControl input[type="checkbox"]:checked::after {
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 80%;
+  height: 80%;
+  background: #86c699;
+  content: "";
+  border-radius: 2px;
+}
+
 .numAdjust {
   width: 3rem;
   height: 2rem;

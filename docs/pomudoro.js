@@ -75,6 +75,7 @@ const settings = {
   shortBreakLength: 5 * 60 * 1000,
   longBreakLength: 15 * 60 * 1000,
   cyclesPerLongBreak: 4,
+  notify: false,
 };
 
 const SETTING_DEFS = {
@@ -100,6 +101,10 @@ const SETTING_DEFS = {
     name: "Pomudoros per long break",
     unit: 1,
     step: 1,
+  },
+  notify: {
+    name: "Send notifications",
+    setEffect: handleChangeNotificationSetting,
   },
 };
 
@@ -279,6 +284,14 @@ function imPomu() {
     `sounds/pomu${pad(Math.floor(Math.random() * NUM_SOUNDS))}.mp3`
   );
   audio.play();
+
+  if (settings.notify) {
+    const notification = new Notification("Pomudoro", {
+      body:
+        state === "working" ? "Pomu is done working!" : "Pomu is done resting!",
+      icon: "gifs/ppbirthday2021.gif",
+    });
+  }
 }
 
 function drawCountdown() {
@@ -370,7 +383,10 @@ function decreaseNumericSetting(settingKey) {
     document.getElementById(settingKey).value = Math.floor(
       settings[settingKey] / unit
     );
-    setEffect();
+
+    if (setEffect) {
+      setEffect();
+    }
   }
 }
 
@@ -450,6 +466,40 @@ function addNumericSetting(settingKey) {
   fieldControls.appendChild(increaseButton);
 }
 
+function changeBooleanSetting(settingKey) {
+  const { setEffect } = SETTING_DEFS[settingKey];
+  settings[settingKey] = document.getElementById(settingKey).checked;
+  if (setEffect) {
+    setEffect();
+  }
+}
+
+function addBooleanSetting(settingKey) {
+  const { name } = SETTING_DEFS[settingKey];
+  const container = document.createElement("div");
+  container.classList.add("booleanControl");
+  document.getElementById("settings").appendChild(container);
+
+  const checkbox = document.createElement("input");
+  checkbox.setAttribute("type", "checkbox");
+  checkbox.setAttribute("id", settingKey);
+  checkbox.checked = settings[settingKey];
+  checkbox.onchange = () => changeBooleanSetting(settingKey);
+  container.appendChild(checkbox);
+
+  const label = document.createElement("label");
+  label.innerText = name;
+  label.setAttribute("for", settingKey);
+  container.appendChild(label);
+}
+
+function handleChangeNotificationSetting() {
+  console.log("Hi");
+  if (settings.notify) {
+    Notification.requestPermission();
+  }
+}
+
 function addSettings() {
   for (const setting of [
     "pomudoroLength",
@@ -459,6 +509,7 @@ function addSettings() {
   ]) {
     addNumericSetting(setting);
   }
+  addBooleanSetting("notify");
 }
 
 /*
